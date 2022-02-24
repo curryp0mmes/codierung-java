@@ -1,3 +1,7 @@
+package encoding.encoders;
+
+import encoding.BinaryHelper;
+
 public class SimpleEncoder implements EncodingType{
     @Override
     public String pixelChanged(String text) {

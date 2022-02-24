@@ -1,3 +1,9 @@
+package encoding;
+
+import encoding.encoders.EncodingType;
+import encoding.encoders.SimpleEncoder;
+import encoding.encoders.UncompressedEncoder;
+
 import javax.swing.*;
 import javax.swing.event.*;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -77,7 +83,7 @@ public class GUI extends JFrame{
         });
     }
     private void inputTextChanged() {
-        symbolCountLabel.setText(String.valueOf( textArea1.getText().length() ));
+        symbolCountLabel.setText(String.valueOf( textArea1.getText().replaceAll("\\s+","").length() ));
         if(text2ImageCheckBox.isSelected()) {
             String str = currentEncoder.textChanged(textArea1.getText());
             setTablePattern(str);
@@ -143,6 +149,19 @@ public class GUI extends JFrame{
                 lastEditedCol = -1;
                 super.mouseReleased(e);
             }
+            @Override
+            public void mousePressed(MouseEvent e) {
+                lastEditedRow = table1.getSelectedRow();
+                lastEditedCol = table1.getSelectedColumn();
+
+                String a = (String) table1.getValueAt(lastEditedRow, lastEditedCol);
+                if(a == null) table1.setValueAt("", lastEditedRow, lastEditedCol);
+                else table1.setValueAt(null,lastEditedRow, lastEditedCol);
+
+                updateTextField();
+
+                super.mousePressed(e);
+            }
         });
         pixelCountLabel.setText(String.valueOf(table1.getColumnCount() * table1.getRowCount()));
 
@@ -170,6 +189,7 @@ public class GUI extends JFrame{
         int col = table1.getSelectedColumn();
         if(row < 0 || col < 0) return;
         if(lastEditedRow == row && lastEditedCol == col) return;
+        if(lastEditedRow == -1 && lastEditedCol == -1) return;
 
         String a = (String) table1.getValueAt(row, col);
         if(a == null) table1.setValueAt("", row, col);

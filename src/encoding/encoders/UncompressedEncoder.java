@@ -1,3 +1,5 @@
+package encoding.encoders;
+
 public class UncompressedEncoder implements EncodingType{
     @Override
     public String pixelChanged(String text) {

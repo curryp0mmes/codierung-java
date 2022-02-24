@@ -1,3 +1,5 @@
+package encoding;
+
 public class BinaryHelper {
     public static String decToBin(int dec) {
         StringBuilder bin = new StringBuilder();
