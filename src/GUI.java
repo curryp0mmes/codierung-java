@@ -59,31 +59,54 @@ public class GUI extends JFrame{
         textArea1.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
-                System.out.println("insert");
-                symbolCountLabel.setText(String.valueOf(textArea1.getText().length()));
-                if(text2ImageCheckBox.isSelected()) currentEncoder.textChanged(textArea1.getText());
+                inputTextChanged();
             }
-
             @Override
             public void removeUpdate(DocumentEvent e) {
-                System.out.println("remove");
-                symbolCountLabel.setText(String.valueOf(textArea1.getText().length()));
-                if(text2ImageCheckBox.isSelected()) currentEncoder.textChanged(textArea1.getText());
+                inputTextChanged();
             }
-
             @Override
             public void changedUpdate(DocumentEvent e) {
-                System.out.println("change");
-                symbolCountLabel.setText(String.valueOf(textArea1.getText().length()));
-                if(text2ImageCheckBox.isSelected()) currentEncoder.textChanged(textArea1.getText());
+                inputTextChanged();
             }
         });
+    }
+    private void inputTextChanged() {
+        symbolCountLabel.setText(String.valueOf(textArea1.getText().length()));
+        if(text2ImageCheckBox.isSelected()) {
+            String str = currentEncoder.textChanged(textArea1.getText());
+            setTablePattern(str);
+        }
+    }
+
+    private void setTablePattern(String input) {
+        int colLength = table1.getColumnCount();
+        int rowLength = table1.getRowCount();
+
+        int i = 0;
+        for (; i < input.length(); i++) {
+            int col = i % colLength;
+            int row = i / colLength;
+            if(row >= rowLength) return;
+
+            if(input.charAt(i) == '0')
+                table1.setValueAt(null, row, col);
+            else
+                table1.setValueAt("",row,col);
+        }
+        if(i < rowLength*colLength) System.out.println("Input String to short");
+        for(; i < rowLength*colLength;i++) {
+            int col = i % colLength;
+            int row = i / colLength;
+
+            table1.setValueAt(null, row, col);
+        }
     }
 
     private void updateTable() {
         table1.setModel( new DefaultTableModel( (Integer)spinnerRow.getValue(), (Integer)spinnerCol.getValue() ) );
         table1.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        //table1.setDefaultEditor(Object.class, new CustomEditor());
+        table1.setDefaultEditor(Object.class, null);
 
         table1.getSelectionModel().addListSelectionListener(this::listSelectionModel);
         table1.getColumnModel().getSelectionModel().addListSelectionListener(this::listSelectionModel);
@@ -97,7 +120,6 @@ public class GUI extends JFrame{
             public void mouseReleased(MouseEvent e) {
                 lastEditedRow = -1;
                 lastEditedCol = -1;
-                textArea1.setText("Test");
                 super.mouseReleased(e);
             }
         });
@@ -107,14 +129,13 @@ public class GUI extends JFrame{
         StringBuilder str = new StringBuilder();
         for (int x = 0; x < table1.getColumnCount(); x++) {
             for (int y = 0; y < table1.getRowCount(); y++) {
-                str.append(table1.getValueAt(x, y));
+                str.append(table1.getValueAt(x, y) == null ? 0 : 1);
             }
         }
         return str.toString();
     }
 
     private void listSelectionModel(ListSelectionEvent e) {
-        System.out.println("Event " + e.getSource());
         int row = table1.getSelectedRow();
         int col = table1.getSelectedColumn();
         if(row < 0 || col < 0) return;
@@ -124,18 +145,11 @@ public class GUI extends JFrame{
         if(a == null) table1.setValueAt("", row, col);
         else table1.setValueAt(null,row, col);
 
+        if(!text2ImageCheckBox.isSelected())
+            textArea1.setText(currentEncoder.pixelChanged(gridToBinaryString()));
+
         lastEditedRow = row;
         lastEditedCol = col;
-    }
-
-    public static class CustomEditor extends DefaultCellEditor {
-        public CustomEditor() {
-            super(new JTextField());
-        }
-
-        public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
-            return null;
-        }
     }
 
     static class CustomRenderer extends DefaultTableCellRenderer {
