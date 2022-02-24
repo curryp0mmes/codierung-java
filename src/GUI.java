@@ -1,11 +1,7 @@
 import javax.swing.*;
-import javax.swing.border.BevelBorder;
-import javax.swing.border.LineBorder;
 import javax.swing.event.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableColumn;
-import javax.swing.table.TableModel;
 import java.awt.*;
 import java.awt.event.*;
 
@@ -18,6 +14,9 @@ public class GUI extends JFrame{
     private JSpinner spinnerCol;
     private JSpinner spinnerRow;
     private JCheckBox text2ImageCheckBox;
+    private JLabel warningLabel;
+    private JLabel pixelCountLabel;
+    private JLabel inputPixelLabel;
 
     private int lastEditedRow = -1;
     private int lastEditedCol = -1;
@@ -34,8 +33,8 @@ public class GUI extends JFrame{
         spinnerRow.setValue(4);
         spinnerCol.setValue(4);
 
-        updateTable();
-
+        updateTableModel();
+        updateTextField();
 
         comboBox1.setModel(new DefaultComboBoxModel<>(new String[]{"Uncompressed", "Simple Compression"}));
         comboBox1.addActionListener(e -> {
@@ -51,10 +50,12 @@ public class GUI extends JFrame{
                     System.err.println("Encoder needs to be implemented");
                     currentEncoder = new UncompressedEncoder();
             }
+            inputTextChanged();
+            updateTextField();
         });
 
-        spinnerRow.addChangeListener(e -> updateTable());
-        spinnerCol.addChangeListener(e -> updateTable());
+        spinnerRow.addChangeListener(e -> updateTableModel());
+        spinnerCol.addChangeListener(e -> updateTableModel());
 
         textArea1.getDocument().addDocumentListener(new DocumentListener() {
             @Override
@@ -70,9 +71,13 @@ public class GUI extends JFrame{
                 inputTextChanged();
             }
         });
+        text2ImageCheckBox.addActionListener(e -> {
+            inputTextChanged();
+            updateTextField();
+        });
     }
     private void inputTextChanged() {
-        symbolCountLabel.setText(String.valueOf(textArea1.getText().length()));
+        symbolCountLabel.setText(String.valueOf( textArea1.getText().length() ));
         if(text2ImageCheckBox.isSelected()) {
             String str = currentEncoder.textChanged(textArea1.getText());
             setTablePattern(str);
@@ -80,6 +85,7 @@ public class GUI extends JFrame{
     }
 
     private void setTablePattern(String input) {
+        inputPixelLabel.setText(String.valueOf(input.length()));
         int colLength = table1.getColumnCount();
         int rowLength = table1.getRowCount();
 
@@ -87,14 +93,27 @@ public class GUI extends JFrame{
         for (; i < input.length(); i++) {
             int col = i % colLength;
             int row = i / colLength;
-            if(row >= rowLength) return;
+            if(row >= rowLength) continue;
 
             if(input.charAt(i) == '0')
                 table1.setValueAt(null, row, col);
             else
                 table1.setValueAt("",row,col);
         }
-        if(i < rowLength*colLength) System.out.println("Input String to short");
+
+        if(i < rowLength*colLength) {
+            warningLabel.setForeground(new Color(241, 87, 87));
+            warningLabel.setText("Input Pixels too short");
+        }
+        else if(i > rowLength*colLength) {
+            warningLabel.setForeground(new Color(241, 87, 87));
+            warningLabel.setText("Input Pixels too long");
+        }
+        else {
+            warningLabel.setForeground(Color.black);
+            warningLabel.setText("No warnings");
+        }
+
         for(; i < rowLength*colLength;i++) {
             int col = i % colLength;
             int row = i / colLength;
@@ -103,16 +122,18 @@ public class GUI extends JFrame{
         }
     }
 
-    private void updateTable() {
+    private void updateTableModel() {
         table1.setModel( new DefaultTableModel( (Integer)spinnerRow.getValue(), (Integer)spinnerCol.getValue() ) );
         table1.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table1.setDefaultEditor(Object.class, null);
+
 
         table1.getSelectionModel().addListSelectionListener(this::listSelectionModel);
         table1.getColumnModel().getSelectionModel().addListSelectionListener(this::listSelectionModel);
 
         for (int i = 0; i < table1.getColumnCount(); i++) {
             table1.getColumnModel().getColumn(i).setCellRenderer(new CustomRenderer());
+            table1.getColumnModel().getColumn(i).setMaxWidth(20);
         }
 
         table1.addMouseListener(new MouseAdapter() {
@@ -123,16 +144,25 @@ public class GUI extends JFrame{
                 super.mouseReleased(e);
             }
         });
+        pixelCountLabel.setText(String.valueOf(table1.getColumnCount() * table1.getRowCount()));
+
+        inputTextChanged();
     }
 
     private String gridToBinaryString() {
         StringBuilder str = new StringBuilder();
-        for (int x = 0; x < table1.getColumnCount(); x++) {
-            for (int y = 0; y < table1.getRowCount(); y++) {
-                str.append(table1.getValueAt(x, y) == null ? 0 : 1);
+        for (int y = 0; y < table1.getRowCount(); y++) {
+            for (int x = 0; x < table1.getColumnCount(); x++) {
+                str.append(table1.getValueAt(y, x) == null ? 0 : 1);
             }
         }
         return str.toString();
+    }
+
+    private void updateTextField() {
+        if(text2ImageCheckBox.isSelected()) return;
+
+        textArea1.setText(currentEncoder.pixelChanged(gridToBinaryString()));
     }
 
     private void listSelectionModel(ListSelectionEvent e) {
@@ -145,8 +175,7 @@ public class GUI extends JFrame{
         if(a == null) table1.setValueAt("", row, col);
         else table1.setValueAt(null,row, col);
 
-        if(!text2ImageCheckBox.isSelected())
-            textArea1.setText(currentEncoder.pixelChanged(gridToBinaryString()));
+        updateTextField();
 
         lastEditedRow = row;
         lastEditedCol = col;
